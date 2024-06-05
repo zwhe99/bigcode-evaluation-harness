@@ -13,6 +13,7 @@ from transformers import (
     AutoTokenizer,
     HfArgumentParser,
 )
+from transformers.utils import is_flash_attn_2_available
 
 from bigcode_eval.arguments import EvalArguments
 from bigcode_eval.evaluator import Evaluator
@@ -281,6 +282,8 @@ def main():
         else:
             print(f"Loading model in {args.precision}")
             model_kwargs["torch_dtype"] = dict_precisions[args.precision]
+            if (model_kwargs["torch_dtype"] is not torch.float32) and is_flash_attn_2_available():
+                model_kwargs["attn_implementation"] = "flash_attention_2"
 
             if args.max_memory_per_gpu:
                 if args.max_memory_per_gpu != "auto":
@@ -314,9 +317,9 @@ def main():
             from peft import PeftModel  # dynamic import to avoid dependency on peft
 
             model = PeftModel.from_pretrained(model, args.peft_model)
-            print("Loaded PEFT model. Merging...")
-            model.merge_and_unload()
-            print("Merge complete.")
+            # print("Loaded PEFT model. Merging...")
+            # model.merge_and_unload()
+            # print("Merge complete.")
 
         if args.left_padding:
             # left padding is required for some models like chatglm3-6b
