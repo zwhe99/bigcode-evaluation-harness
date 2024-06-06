@@ -223,7 +223,7 @@ class HumanEvalPack(Task):
         elif self.prompt == "instructcodet5p":
             # https://github.com/salesforce/CodeT5/blob/main/CodeT5%2B/humaneval/generate_codet5p.py#L89
             prompt = f'Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{inp}\n\n### Response:{prompt_base}'       
-        elif self.prompt == "wizardcoder":
+        elif self.prompt == "wizardcoder" or self.prompt == "alpaca-chat":
             # https://github.com/nlpxucan/WizardLM/blob/main/WizardCoder/src/humaneval_gen.py#L37
             prompt = f'Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{inp}\n\n### Response:\n{prompt_base}'
         elif self.prompt == "codellama" or self.prompt == "llama-2-chat":
