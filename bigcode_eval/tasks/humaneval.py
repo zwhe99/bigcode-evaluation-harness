@@ -8,7 +8,7 @@ They were handwritten to ensure not to be included in the training set of code g
 Homepage: https://github.com/openai/human-eval
 """
 
-
+import json
 from bigcode_eval.base import Task
 from bigcode_eval.tasks.custom_metrics.code_eval import compute_code_eval
 
@@ -47,7 +47,7 @@ class GeneralHumanEval(Task):
 
     DATASET_PATH = "openai_humaneval"
 
-    def __init__(self, strip_prompt, k=[1, 10, 100], num_workers=16, timeout=3.0):
+    def __init__(self, strip_prompt, k=[1, 10, 100], num_workers=16, timeout=3.0, results_path=None):
         super().__init__(
             stop_words=["\nclass", "\ndef", "\n#", "\n@", "\nprint", "\nif", "\n```", "<file_sep>"],
             requires_execution=True,
@@ -56,6 +56,7 @@ class GeneralHumanEval(Task):
         self.k = k
         self.num_workers = num_workers
         self.timeout = timeout
+        self.results_path = results_path
 
     def get_dataset(self):
         """Returns dataset for the task or an iterable of any object, that get_prompt can handle"""
@@ -95,11 +96,14 @@ class GeneralHumanEval(Task):
         :param references: list(str)
             list of str containing refrences
         """
-        results, _ = compute_code_eval(
+        results, all_results = compute_code_eval(
             references=references,
             predictions=generations,
             k=self.k,
             num_workers=self.num_workers,
             timeout=self.timeout,
         )
+        if self.results_path:
+            with open(self.results_path, "w") as f:
+                json.dump(all_results, f, indent=4, sort_keys=True)
         return results

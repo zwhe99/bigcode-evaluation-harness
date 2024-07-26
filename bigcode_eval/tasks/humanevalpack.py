@@ -49,7 +49,7 @@ LANGUAGE_TO_STOP_WORDS = {
 }
 
 LANGUAGE_TO_TIMEOUT = {
-    "python": 10,
+    "python": 20,
     "cpp": 60,
     "js": 10,
     "java": 10,
@@ -59,7 +59,7 @@ LANGUAGE_TO_TIMEOUT = {
 
 # Java sometimes fails with more workers; For JS it's twice as fast with 4 workers
 LANGUAGE_TO_NUM_WORKERS = {
-    "python": 4,
+    "python": 48,
     "cpp": 4,
     "js": 4,
     "java": 1,

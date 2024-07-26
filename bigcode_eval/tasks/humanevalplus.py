@@ -29,13 +29,13 @@ class GeneralHumanEvalPlus(GeneralHumanEval):
 
     DATASET_PATH = "evalplus/humanevalplus"
 
-    def __init__(self, strip_prompt, k=[1, 10, 100], num_workers=16, timeout=20.0):
+    def __init__(self, strip_prompt, k=[1, 10, 100], num_workers=48, timeout=20.0, results_path=None):
         if timeout < 20.0:
             warn(
                 "It is suggested to have a longer timeout as HumanEval+ has lots of tests. "
                 f"The current timeout is {timeout}s while the suggested timeout is 20s."
             )
-        super().__init__(strip_prompt, k, num_workers, timeout)
+        super().__init__(strip_prompt, k, num_workers, timeout, results_path)
 
 
 def create_task(strip_prompt):
