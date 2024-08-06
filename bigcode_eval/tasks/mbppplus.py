@@ -40,7 +40,8 @@ class MBPPPlus(MBPP):
         """
         description = doc["prompt"]  # sanitized testset use "prompt" instead of "text"
         test_example = doc["test_list"][0]
-        prompt = f'"""\n{description}\n{test_example}\n"""\n'
+        inp = f'{description}\n{test_example}'
+        prompt = f'Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{inp}\n\n### Response:\n```python'
         return prompt
 
     # NOTE(@ganler): MBPP+ extends the original MBPP jsonl data with a "test" field which
@@ -69,6 +70,7 @@ class MBPPPlus(MBPP):
         results, _ = compute_code_eval(
             references=references,
             predictions=generations,
+            num_workers=48,  # 48 workers
             timeout=10.0,  # 10s timeout
         )
         return results
