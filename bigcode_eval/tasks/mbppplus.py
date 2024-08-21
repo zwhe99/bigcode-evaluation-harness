@@ -33,16 +33,87 @@ class MBPPPlus(MBPP):
 
     DATASET_PATH = "evalplus/mbppplus"
 
+    def get_prompt_wo_base(self, doc):
+        """Builds the prompt for the LM to generate from.
+        MBPP prompt is built following to InCoder (Fried et al.) approach
+        prompt = docstring that includes one test
+        """
+        function_head = doc["code"].split("def")[1].split(":")[0].strip()
+
+        prefixes = [
+            "Write a python function to ",
+            "Write a python function that ",
+            "Write a python function ",
+            "Write a function that ",
+            "Write a function to ",
+            "Write a function which ",
+            "Write a function ",
+            "Write function to ",
+            "write a function that ",
+        ]
+
+        description = doc["prompt"]
+        for prefix in prefixes:
+            if prefix in description:
+                description = description.replace(prefix, "")
+
+        description = description.strip().rstrip(".").capitalize()
+
+        test_example = doc["test_list"][0]
+        if not test_example.startswith(">>>"):
+            test_example = f">>> {test_example}"
+
+        inp = f"""Write a Python function named `{function_head}` to solve the following problem:
+{description}
+{test_example}"""
+
+        prompt = f'Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{inp}\n\n### Response:\n'
+        return prompt.strip()
+
     def get_prompt(self, doc):
         """Builds the prompt for the LM to generate from.
         MBPP prompt is built following to InCoder (Fried et al.) approach
         prompt = docstring that includes one test
         """
-        description = doc["prompt"]  # sanitized testset use "prompt" instead of "text"
+        function_head = doc["code"].split("def")[1].split(":")[0].strip()
+
+        prefixes = [
+            "Write a python function to ",
+            "Write a python function that ",
+            "Write a python function ",
+            "Write a function that ",
+            "Write a function to ",
+            "Write a function which ",
+            "Write a function ",
+            "Write function to ",
+            "write a function that ",
+        ]
+
+        description = doc["prompt"]
+        for prefix in prefixes:
+            if prefix in description:
+                description = description.replace(prefix, "")
+
+        description = description.strip().rstrip(".").capitalize()
+
         test_example = doc["test_list"][0]
-        inp = f'{description}\n{test_example}'
-        prompt = f'Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{inp}\n\n### Response:\n```python'
-        return prompt
+        if not test_example.startswith(">>>"):
+            test_example = f">>> {test_example}"
+
+        inp = f"""Write a Python function named `{function_head}` to solve the following problem:
+{description}
+{test_example}"""
+
+        prompt_base = f'''def {function_head}:
+    """
+    {description}
+
+    {test_example}
+    """
+'''.strip()
+
+        prompt = f'Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{inp}\n\n### Response:\n{prompt_base}'
+        return prompt.strip()
 
     # NOTE(@ganler): MBPP+ extends the original MBPP jsonl data with a "test" field which
     #                includes the testing code ready for execution. Note the "test" field
@@ -67,6 +138,28 @@ class MBPPPlus(MBPP):
         :param references: list(str)
             list of str containing refrences
         """
+        python_imports = "\n".join([
+            "import math",
+            "import re",
+            "import sys",
+            "import copy",
+            "import datetime",
+            "import itertools",
+            "import collections",
+            "import heapq",
+            "import statistics",
+            "import functools",
+            "import hashlib",
+            "import numpy",
+            "import numpy as np",
+            "import string",
+            "from typing import *",
+            "from collections import *",
+        ])
+        generations = [
+            [(python_imports + "\n" + g).strip() for g in gen] for gen in generations
+        ]
+
         results, _ = compute_code_eval(
             references=references,
             predictions=generations,
@@ -74,3 +167,31 @@ class MBPPPlus(MBPP):
             timeout=10.0,  # 10s timeout
         )
         return results
+
+    def remove_last_block(self, code):
+        """
+        Adapted from https://github.com/THUDM/CodeGeeX/blob/23ee51505a2bcd34d59d2e271b22e5bd91475462/codegeex/benchmark/utils.py#L151
+        """
+        for w in self.stop_words:
+            if w in code:
+                code = code[:code.find(w)]
+
+        ### Find the first occassion where a chain of { } is closed
+        for i, line in enumerate(code.split("\n")):
+            if len(line.strip()) > 0 and line[0] != ' ' and line[0] != '\t':
+                return "\n".join(code.split("\n")[:i])
+        return code
+
+    def postprocess_generation(self, generation, idx):
+        """Defines the postprocessing for a LM generation.
+        :param generation: str
+            code generation from LM
+        :param idx: int
+            index of doc in the dataset to which the generation belongs
+            (not used for Humaneval-Task)
+        """
+        doc = self.get_dataset()[idx]
+        prompt = self.get_prompt(doc)
+        prompt_wo_base = self.get_prompt_wo_base(doc)
+        gen = self.remove_last_block(generation[len(prompt):].rstrip())
+        return (prompt + gen)[len(prompt_wo_base):]
